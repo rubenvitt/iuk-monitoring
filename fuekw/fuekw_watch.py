@@ -123,10 +123,13 @@ def save_state(path, state) -> None:
     os.replace(tmp, path)
 
 
-def run_once(fetch_pass, check_hub, send, state_path, now) -> None:
+def run_once(fetch_pass, check_hub, send, state_path, now, record=None) -> None:
     state = load_state(state_path)
     html = fetch_pass()
-    msgs, new_state = decide(parse_pass(html) if html else None, check_hub(), state, now)
+    volume = parse_pass(html) if html else None
+    if volume and record:
+        record(volume)  # must not raise: history is nice to have, alerts are not
+    msgs, new_state = decide(volume, check_hub(), state, now)
     for m in msgs:
         send(m)  # raises -> state stays unsaved, alert is retried next run
     save_state(state_path, new_state)
@@ -152,6 +155,15 @@ def _check_hub(url: str) -> bool:
         return False
 
 
+def _record(url: str, token: str, v: Volume) -> None:
+    body = json.dumps({"period": v.period, "remaining_gb": v.remaining_gb, "total_gb": v.total_gb}).encode()
+    req = urllib.request.Request(url, body, {"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        urllib.request.urlopen(req, timeout=20).close()
+    except (OSError, http.client.HTTPException, ValueError) as e:
+        print(f"volumen: {e}", file=sys.stderr)
+
+
 def _send(token: str, chat_id: str, text: str) -> None:
     data = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode()
     urllib.request.urlopen(f"https://api.telegram.org/bot{token}/sendMessage", data, timeout=20).close()
@@ -163,7 +175,9 @@ def main() -> None:
     token, chat = os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"]
     hub = os.environ["HUB_HEALTH_URL"]
     state = os.environ.get("STATE_FILE", "/var/lib/fuekw-watch/state.json")
-    run_once(_fetch_pass, lambda: _check_hub(hub), lambda t: _send(token, chat, t), state, datetime.now())
+    vol_url, vol_token = os.environ.get("VOLUMEN_URL"), os.environ.get("VOLUMEN_TOKEN")
+    record = (lambda v: _record(vol_url, vol_token, v)) if vol_url and vol_token else None
+    run_once(_fetch_pass, lambda: _check_hub(hub), lambda t: _send(token, chat, t), state, datetime.now(), record)
 
 
 if __name__ == "__main__":

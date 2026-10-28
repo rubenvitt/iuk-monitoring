@@ -14,7 +14,8 @@ jobs:
           python-version: "3.14"
       - name: Unit-Tests
         run: |
-          if [ -d fuekw ]; then python -m unittest discover -s fuekw -v; else echo "noch keine Tests"; fi
+          python -m unittest discover -s fuekw -v
+          python -m unittest discover -s iuk-services/volumen -v
       - name: ShellCheck
         run: |
           files=$(git ls-files '*.sh')

@@ -23,6 +23,24 @@ services:
       - traefik.http.routers.beszel.entrypoints=web
       - traefik.http.services.beszel.loadbalancer.server.port=8090
 
+  volumen:
+    # Data-volume history of the vehicle SIM; fed hourly by fuekw-watch, tailnet only.
+    image: python:3.14-slim
+    container_name: volumen
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    command: ["python", "-u", "/app/app.py"]
+    ports:
+      - "${HUB_BIND_IP:?set HUB_BIND_IP in .env}:8091:8091"
+    volumes:
+      - ./volumen:/app:ro
+      - /data/volumen:/data
+    environment:
+      INGEST_TOKEN: ${VOLUMEN_TOKEN:?set VOLUMEN_TOKEN in .env}
+      BESZEL_URL: https://${HUB_HOSTNAME}
+      DB_PATH: /data/volumen.db
+
   beszel-agent:
     image: henrygd/beszel-agent:0.21.1
     container_name: beszel-agent

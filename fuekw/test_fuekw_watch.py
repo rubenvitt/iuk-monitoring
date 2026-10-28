@@ -1,3 +1,5 @@
+import contextlib
+import io
 import gzip
 import http.client
 import json
@@ -124,6 +126,20 @@ class RunOnceTests(unittest.TestCase):
             self.assertEqual(json.loads(path.read_text())["alerted"], ["low"])
             fw.run_once(lambda: html, lambda: True, sent.append, path, TUE)
             self.assertEqual(len(sent), 1)
+
+    def test_reading_is_recorded_and_unreachable_history_is_harmless(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "state.json"
+            html = FIXTURE.read_text()
+            got = []
+            fw.run_once(lambda: html, lambda: True, lambda t: None, path, TUE, got.append)
+            self.assertEqual(got[0].period, "Oktober 2026")
+            fw.run_once(lambda: None, lambda: True, lambda t: None, path, TUE, got.append)
+            self.assertEqual(len(got), 1)  # nothing to record without a reading
+            err = io.StringIO()
+            with contextlib.redirect_stderr(err):
+                fw._record("http://127.0.0.1:9/api/reading", "t", got[0])  # closed port: logs, no raise
+            self.assertIn("volumen:", err.getvalue())
 
     def test_corrupt_state_is_ignored_and_rewritten(self):
         html = FIXTURE.read_text()
