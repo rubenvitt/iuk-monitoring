@@ -19,7 +19,7 @@ services:
     labels:
       - traefik.enable=${HUB_PUBLIC:-false}
       - traefik.docker.network=proxy
-      - traefik.http.routers.beszel.rule=Host(`${HUB_HOSTNAME}`) && !PathPrefix(`/_/`) && !PathPrefix(`/api/collections/_superusers`) && !PathPrefix(`/api/collections/pbc_3142635823`)
+      - traefik.http.routers.beszel.rule=Host(`${HUB_HOSTNAME}`) && !PathRegexp(`(?i)^/(_|%5f)(/|%2f)|^/api/collections/(_|%5f)superusers|^/api/collections/pbc_3142635823`)
       - traefik.http.routers.beszel.entrypoints=web
       - traefik.http.services.beszel.loadbalancer.server.port=8090
 
