@@ -13,7 +13,7 @@ services:
     environment:
       APP_URL: https://${HUB_HOSTNAME:?set HUB_HOSTNAME in .env}
       USER_CREATION: "true"
-      DISABLE_PASSWORD_AUTH: "true"
+      DISABLE_PASSWORD_AUTH: ${DISABLE_PASSWORD_AUTH:-true}
       OAUTH_DEFAULT_USER_ROLE: readonly
     # Public only when HUB_PUBLIC=true; superuser admin (/_/) stays tailnet-only.
     labels:
