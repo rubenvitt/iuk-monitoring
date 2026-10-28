@@ -1,0 +1,19 @@
+# Beszel agent for the vehicle server. Values come from .env.
+services:
+  beszel-agent:
+    image: henrygd/beszel-agent:0.21.1
+    container_name: beszel-agent
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./beszel_agent_data:/var/lib/beszel-agent
+    environment:
+      LISTEN: 127.0.0.1:45876
+      KEY: ${KEY:?set KEY in .env}
+      TOKEN: ${TOKEN:?set TOKEN in .env}
+      HUB_URL: ${HUB_URL:?set HUB_URL in .env}
+      DATA_DIR: /var/lib/beszel-agent
+      DOCKER_IMAGE_CHECK: "false"
+      PACKAGE_UPDATES_INTERVAL: "0"
+      SKIP_SYSTEMD_LOGS: "true"
