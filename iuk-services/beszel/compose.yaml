@@ -15,10 +15,11 @@ services:
       USER_CREATION: "true"
       DISABLE_PASSWORD_AUTH: "true"
       OAUTH_DEFAULT_USER_ROLE: readonly
+    # Public only when HUB_PUBLIC=true; superuser admin (/_/) stays tailnet-only.
     labels:
-      - traefik.enable=true
+      - traefik.enable=${HUB_PUBLIC:-false}
       - traefik.docker.network=proxy
-      - traefik.http.routers.beszel.rule=Host(`${HUB_HOSTNAME}`)
+      - traefik.http.routers.beszel.rule=Host(`${HUB_HOSTNAME}`) && !PathPrefix(`/_/`) && !PathPrefix(`/api/collections/_superusers`)
       - traefik.http.routers.beszel.entrypoints=web
       - traefik.http.services.beszel.loadbalancer.server.port=8090
 
