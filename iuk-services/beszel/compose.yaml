@@ -19,7 +19,7 @@ services:
     labels:
       - traefik.enable=${HUB_PUBLIC:-false}
       - traefik.docker.network=proxy
-      - traefik.http.routers.beszel.rule=Host(`${HUB_HOSTNAME}`) && !PathPrefix(`/_/`) && !PathPrefix(`/api/collections/_superusers`)
+      - traefik.http.routers.beszel.rule=Host(`${HUB_HOSTNAME}`) && !PathPrefix(`/_/`) && !PathPrefix(`/api/collections/_superusers`) && !PathPrefix(`/api/collections/pbc_3142635823`)
       - traefik.http.routers.beszel.entrypoints=web
       - traefik.http.services.beszel.loadbalancer.server.port=8090
 
@@ -27,16 +27,18 @@ services:
     image: henrygd/beszel-agent:0.21.1
     container_name: beszel-agent
     restart: unless-stopped
+    profiles: ["agent"]
     network_mode: host
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /data/beszel-agent:/var/lib/beszel-agent
+      # extra disk /data (mkdir /data/.beszel first); see beszel.dev/guide/additional-disks
+      - /data/.beszel:/extra-filesystems/data:ro
     environment:
       KEY: ${KEY:-}
       TOKEN: ${TOKEN:-}
       HUB_URL: ${HUB_URL:?set HUB_URL in .env}
       LISTEN: 127.0.0.1:45876
-      EXTRA_FILESYSTEMS: /data
 
 networks:
   proxy:

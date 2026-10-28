@@ -8,4 +8,5 @@ mkdir -p "$dst" /data/beszel
 cp "$src/compose.yaml" "$dst/compose.yaml"
 cd "$dst"
 docker compose up -d beszel
-# the agent needs KEY/TOKEN from the hub: start it manually once .env has them
+# the agent (profile "agent") needs KEY/TOKEN from the hub; once .env has them:
+#   mkdir -p /data/.beszel && docker compose --profile agent up -d beszel-agent
