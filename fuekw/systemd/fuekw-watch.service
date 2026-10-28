@@ -9,3 +9,4 @@ DynamicUser=yes
 StateDirectory=fuekw-watch
 EnvironmentFile=/etc/fuekw-watch.env
 ExecStart=/usr/bin/python3 /opt/fuekw-watch/fuekw_watch.py run
+TimeoutStartSec=2min

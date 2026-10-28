@@ -7,6 +7,7 @@ src="$(cd "$(dirname "$0")" && pwd)/beszel-agent"
 dst=/opt/beszel-agent
 mkdir -p "$dst"
 if [ -n "${1:-}" ]; then
+  { [ -f "$1" ] && [ ! -L "$1" ]; } || { echo "not a regular file: $1" >&2; exit 1; }
   install -m 600 -o root -g root "$1" "$dst/.env"
   rm -f "$1"
 fi

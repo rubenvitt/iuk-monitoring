@@ -5,6 +5,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 if [ -n "${1:-}" ]; then
+  { [ -f "$1" ] && [ ! -L "$1" ]; } || { echo "not a regular file: $1" >&2; exit 1; }
   install -m 600 -o root -g root "$1" /etc/fuekw-watch.env
   rm -f "$1"
 fi

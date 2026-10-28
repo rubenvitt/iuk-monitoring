@@ -14,6 +14,7 @@ from datetime import date, datetime
 
 PASS_URL = "https://pass.telekom.de"
 LOW_FRACTION = 0.2
+FAILS_TO_ALERT = 2  # consecutive hourly runs; mobile uplink blips are normal
 UNIT_GB = {"GB": 1.0, "MB": 1 / 1000, "KB": 1 / 1_000_000}
 PREFIX = "🚒 FüKw:"
 
@@ -53,10 +54,12 @@ def decide(volume, hub_ok, state, now):
     msgs = []
 
     if volume is None:
-        if not st.get("pass_broken"):
+        st["pass_fails"] = st.get("pass_fails", 0) + 1
+        if st["pass_fails"] >= FAILS_TO_ALERT and not st.get("pass_broken"):
             msgs.append(f"{PREFIX} Volumen-Abfrage kaputt – die Telekom-Seite liefert nichts Lesbares.")
             st["pass_broken"] = True
     else:
+        st["pass_fails"] = 0
         if st.get("pass_broken"):
             msgs.append(f"{PREFIX} Entwarnung, die Volumen-Abfrage funktioniert wieder.")
             st["pass_broken"] = False
@@ -79,7 +82,8 @@ def decide(volume, hub_ok, state, now):
             msgs.append(f"FüKw-Volumen: {left} übrig ({volume.period})")
             st["last_weekly"] = now.date().isoformat()
 
-    if not hub_ok and not st.get("hub_down"):
+    st["hub_fails"] = 0 if hub_ok else st.get("hub_fails", 0) + 1
+    if st["hub_fails"] >= FAILS_TO_ALERT and not st.get("hub_down"):
         msgs.append(f"{PREFIX} Hub nicht erreichbar.")
         st["hub_down"] = True
     elif hub_ok and st.get("hub_down"):
@@ -100,6 +104,9 @@ def load_state(path) -> dict:
     for k in ("period", "last_weekly"):
         if not isinstance(state.get(k), (str, type(None))):
             del state[k]
+    for k in ("pass_fails", "hub_fails"):
+        if k in state and (type(state[k]) is not int or state[k] < 0):
+            del state[k]
     al = state.get("alerted")
     if "alerted" in state and not (isinstance(al, list) and all(isinstance(x, str) for x in al)):
         del state["alerted"]
@@ -111,6 +118,8 @@ def save_state(path, state) -> None:
     fd, tmp = tempfile.mkstemp(dir=d)
     with os.fdopen(fd, "w") as f:
         json.dump(state, f)
+        f.flush()
+        os.fsync(f.fileno())  # vehicle power can drop any time
     os.replace(tmp, path)
 
 

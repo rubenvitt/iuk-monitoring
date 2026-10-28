@@ -58,8 +58,10 @@ class DecideTests(unittest.TestCase):
         self.assertEqual((msgs, st["alerted"]), ([], []))
 
     def test_broken_reported_once(self):
-        m1, st = decide(None, True, {}, TUE)
+        m0, st = decide(None, True, {}, TUE)
+        m1, st = decide(None, True, st, TUE)
         m2, st = decide(None, True, st, TUE)
+        self.assertEqual(m0, [])
         self.assertEqual(len(m1), 1)
         self.assertIn("Volumen-Abfrage kaputt", m1[0])
         self.assertEqual(m2, [])
@@ -69,14 +71,25 @@ class DecideTests(unittest.TestCase):
         self.assertFalse(st["pass_broken"])
 
     def test_hub_down_and_recovery(self):
-        m1, st = decide(Volume(25, 30, "Oktober 2026"), False, {}, TUE)
-        m2, st = decide(Volume(25, 30, "Oktober 2026"), False, st, TUE)
+        v = Volume(25, 30, "Oktober 2026")
+        m0, st = decide(v, False, {}, TUE)
+        m1, st = decide(v, False, st, TUE)
+        m2, st = decide(v, False, st, TUE)
+        self.assertEqual(m0, [])
         self.assertEqual(len(m1), 1)
         self.assertIn("Hub nicht erreichbar", m1[0])
         self.assertEqual(m2, [])
-        m3, _ = decide(Volume(25, 30, "Oktober 2026"), True, st, TUE)
+        m3, _ = decide(v, True, st, TUE)
         self.assertEqual(len(m3), 1)
         self.assertIn("wieder erreichbar", m3[0])
+
+    def test_single_blip_stays_silent(self):
+        # mobile uplink drops briefly: one failed run must not alert or need an all-clear
+        v = Volume(25, 30, "Oktober 2026")
+        m1, st = decide(None, False, {}, TUE)
+        m2, st = decide(v, True, st, TUE)
+        m3, st = decide(None, False, st, TUE)
+        self.assertEqual((m1, m2, m3), ([], [], []))
 
     def test_weekly_summary_monday(self):
         v = Volume(1.48, 30, "Oktober 2026")
