@@ -1,0 +1,11 @@
+[Unit]
+Description=FüKw-Wächter: Datenvolumen und Erreichbarkeit des Hubs
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+StateDirectory=fuekw-watch
+EnvironmentFile=/etc/fuekw-watch.env
+ExecStart=/usr/bin/python3 /opt/fuekw-watch/fuekw_watch.py run

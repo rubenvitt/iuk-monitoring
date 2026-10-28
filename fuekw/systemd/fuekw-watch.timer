@@ -1,0 +1,9 @@
+[Unit]
+Description=FüKw-Wächter stündlich
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+
+[Install]
+WantedBy=timers.target
