@@ -133,7 +133,7 @@ def run_once(fetch_pass, check_hub, send, state_path, now) -> None:
 
 
 def _fetch_pass() -> str | None:
-    req = urllib.request.Request(PASS_URL, headers={"Accept-Encoding": "gzip", "User-Agent": "fuekw-watch"})
+    req = urllib.request.Request(PASS_URL, headers={"Accept-Encoding": "gzip", "User-Agent": "Mozilla/5.0 (compatible; fuekw-watch)"})
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             body = r.read()
