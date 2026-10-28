@@ -8,6 +8,6 @@ mkdir -p "$dst" /data/beszel /data/volumen
 cp "$src/compose.yaml" "$dst/compose.yaml"
 rm -rf "$dst/volumen" && cp -r "$src/../volumen" "$dst/volumen"
 cd "$dst"
-docker compose up -d beszel volumen
+docker compose up -d beszel volumen volumen-auth
 # the agent (profile "agent") needs KEY/TOKEN from the hub; once .env has them:
 #   mkdir -p /data/.beszel && docker compose --profile agent up -d beszel-agent

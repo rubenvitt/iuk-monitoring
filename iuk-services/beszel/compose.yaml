@@ -24,7 +24,8 @@ services:
       - traefik.http.services.beszel.loadbalancer.server.port=8090
 
   volumen:
-    # Data-volume history of the vehicle SIM; fed hourly by fuekw-watch, tailnet only.
+    # Data-volume history of the vehicle SIM; fed hourly by fuekw-watch over the tailnet,
+    # public view only through volumen-auth.
     image: python:3.14-slim
     container_name: volumen
     restart: unless-stopped
@@ -40,6 +41,36 @@ services:
       INGEST_TOKEN: ${VOLUMEN_TOKEN:?set VOLUMEN_TOKEN in .env}
       BESZEL_URL: https://${HUB_HOSTNAME}
       DB_PATH: /data/volumen.db
+
+  volumen-auth:
+    # Pocket ID login in front of volumen; access is limited by the OIDC client's allowed groups.
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+    container_name: volumen-auth
+    restart: unless-stopped
+    networks:
+      - proxy
+      - default
+    environment:
+      OAUTH2_PROXY_PROVIDER: oidc
+      OAUTH2_PROXY_PROVIDER_DISPLAY_NAME: Pocket ID
+      OAUTH2_PROXY_OIDC_ISSUER_URL: ${OIDC_ISSUER_URL:?set OIDC_ISSUER_URL in .env}
+      OAUTH2_PROXY_CLIENT_ID: ${VOLUMEN_OIDC_CLIENT_ID:?set VOLUMEN_OIDC_CLIENT_ID in .env}
+      OAUTH2_PROXY_CLIENT_SECRET: ${VOLUMEN_OIDC_CLIENT_SECRET:?set VOLUMEN_OIDC_CLIENT_SECRET in .env}
+      OAUTH2_PROXY_COOKIE_SECRET: ${VOLUMEN_COOKIE_SECRET:?set VOLUMEN_COOKIE_SECRET in .env}
+      OAUTH2_PROXY_CODE_CHALLENGE_METHOD: S256
+      OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+      OAUTH2_PROXY_REDIRECT_URL: https://${VOLUMEN_HOSTNAME:?set VOLUMEN_HOSTNAME in .env}/oauth2/callback
+      OAUTH2_PROXY_UPSTREAMS: http://volumen:8091/
+      OAUTH2_PROXY_HTTP_ADDRESS: 0.0.0.0:4180
+      OAUTH2_PROXY_REVERSE_PROXY: "true"
+      OAUTH2_PROXY_COOKIE_SECURE: "true"
+      OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: "true"
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.volumen.rule=Host(`${VOLUMEN_HOSTNAME}`)
+      - traefik.http.routers.volumen.entrypoints=web
+      - traefik.http.services.volumen.loadbalancer.server.port=4180
 
   beszel-agent:
     image: henrygd/beszel-agent:0.21.1
