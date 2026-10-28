@@ -1,0 +1,7 @@
+*.env
+!*.env.example
+secrets/
+.superpowers/
+__pycache__/
+# Design und Plan enthalten interne Infrastruktur-Details und bleiben lokal
+docs/
