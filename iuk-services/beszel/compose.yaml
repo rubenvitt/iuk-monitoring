@@ -1,0 +1,42 @@
+# Beszel hub + local agent. All environment-specific values come from .env.
+services:
+  beszel:
+    image: henrygd/beszel:0.21.1
+    container_name: beszel
+    restart: unless-stopped
+    networks:
+      - proxy
+    ports:
+      - "${HUB_BIND_IP:?set HUB_BIND_IP in .env}:8090:8090"
+    volumes:
+      - /data/beszel:/beszel_data
+    environment:
+      APP_URL: https://${HUB_HOSTNAME:?set HUB_HOSTNAME in .env}
+      USER_CREATION: "true"
+      DISABLE_PASSWORD_AUTH: "true"
+      OAUTH_DEFAULT_USER_ROLE: readonly
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=proxy
+      - traefik.http.routers.beszel.rule=Host(`${HUB_HOSTNAME}`)
+      - traefik.http.routers.beszel.entrypoints=web
+      - traefik.http.services.beszel.loadbalancer.server.port=8090
+
+  beszel-agent:
+    image: henrygd/beszel-agent:0.21.1
+    container_name: beszel-agent
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /data/beszel-agent:/var/lib/beszel-agent
+    environment:
+      KEY: ${KEY:-}
+      TOKEN: ${TOKEN:-}
+      HUB_URL: ${HUB_URL:?set HUB_URL in .env}
+      LISTEN: 127.0.0.1:45876
+      EXTRA_FILESYSTEMS: /data
+
+networks:
+  proxy:
+    external: true
