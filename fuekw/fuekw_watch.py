@@ -33,14 +33,15 @@ def _num(s: str) -> float:
 def parse_pass(html: str) -> Volume | None:
     # Only the first match is used: the page repeats the volume block.
     try:
-        rem = re.search(r'remaining-volume-value">\s*([\d.,]+)\s*<', html)
-        tot = re.search(r'start-volume">\s*([\d.,]+)\s*<', html)
-        unit = re.search(r'volume-unit">\s*([A-Za-z]+)\s*<', html)
+        # each value carries its own unit: "905,31 MB / 30 GB" once less than 1 GB is left
+        unit = r'.*?volume-unit">\s*([A-Za-z]+)\s*<'
+        rem = re.search(r'remaining-volume-value">\s*([\d.,]+)\s*<' + unit, html, re.S)
+        tot = re.search(r'start-volume">\s*([\d.,]+)\s*<' + unit, html, re.S)
         per = re.search(r"Abrechnungsmonat:\s*([^<\n]+)", html)
-        if not (rem and tot and unit and per):
+        if not (rem and tot and per):
             return None
-        f = UNIT_GB[unit.group(1).upper()]
-        return Volume(_num(rem.group(1)) * f, _num(tot.group(1)) * f, per.group(1).strip())
+        return Volume(_num(rem.group(1)) * UNIT_GB[rem.group(2).upper()],
+                      _num(tot.group(1)) * UNIT_GB[tot.group(2).upper()], per.group(1).strip())
     except (KeyError, ValueError):
         return None
 

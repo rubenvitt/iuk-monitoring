@@ -17,10 +17,10 @@ TUE = datetime(2026, 10, 27, 12, 0)
 MON = datetime(2026, 10, 26, 10, 0)  # a Monday
 
 
-def snippet(value, total="30", unit="GB", period="Oktober 2026"):
+def snippet(value, total="30", unit="GB", period="Oktober 2026", total_unit=None):
     return (
-        f'<div class="remaining-volume-value">{value}\n</div>'
-        f'<div class="start-volume">{total}</div><div class="volume-unit">{unit}</div>'
+        f'<div class="remaining-volume-value">{value}\n</div><div class="volume-unit">{unit}</div>'
+        f'<div class="start-volume">{total}</div><div class="volume-unit">{total_unit or unit}</div>'
         f'<div class="info-row">Abrechnungsmonat: {period}\n</div>'
     )
 
@@ -35,6 +35,11 @@ class ParseTests(unittest.TestCase):
     def test_parse_mb_unit(self):
         v = parse_pass(snippet("500", total="1000", unit="MB"))
         self.assertEqual((v.remaining_gb, v.total_gb), (0.5, 1.0))
+
+    def test_parse_mixed_units_below_one_gb(self):
+        # live page on 29.10.2026: "905,31 MB / 30 GB"
+        v = parse_pass(snippet("905,31", unit="MB", total_unit="GB"))
+        self.assertEqual((v.remaining_gb, v.total_gb), (0.90531, 30.0))
 
     def test_parse_unknown_layout_returns_none(self):
         self.assertIsNone(parse_pass("<html>Page not found</html>"))
