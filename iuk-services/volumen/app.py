@@ -14,6 +14,7 @@ from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
 TZ = ZoneInfo("Europe/Berlin")
+STALE_AFTER_H = 3  # readings arrive hourly
 MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli",
           "August", "September", "Oktober", "November", "Dezember"]
 
@@ -132,12 +133,20 @@ nav a{margin-right:12px}a{color:var(--bar)}h1{font-size:1.4rem;margin:.6rem 0}
 .kpis span,.lbl,small{color:var(--muted);fill:var(--muted);font-size:12px}
 svg{width:100%;height:auto}.axis{stroke:var(--line)}.quota{stroke:var(--accent);stroke-dasharray:6 4}
 .used{fill:none;stroke:var(--fg);stroke-width:2}.proj{stroke:var(--fg);stroke-dasharray:3 4;opacity:.6}.bar{fill:var(--bar)}
+.stale{border:1px solid var(--accent);border-radius:8px;padding:8px 10px;color:var(--accent)}
 table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left}
 @media print{nav,.noprint{display:none}body{max-width:none}}
 """
 
 
-def render(db, period, beszel_url):
+def stale_hint(last, now):
+    hours = (now - last).total_seconds() / 3600
+    if hours < STALE_AFTER_H:
+        return ""
+    return f'<p class="stale">Veraltet: letzter Messwert vor {hours:.0f} Stunden. Die Zahlen unten zeigen nicht den aktuellen Stand.</p>'
+
+
+def render(db, period, beszel_url, now=None):
     all_p = periods(db)
     period = period if period in all_p else (all_p[0] if all_p else None)
     head = (f'<!doctype html><html lang="de"><head><meta charset="utf-8">'
@@ -162,7 +171,8 @@ def render(db, period, beszel_url):
         end = f'{m["exhausted"]:%d.%m.}' if m["exhausted"] else "–"
         summary.append(f"<tr><td>{html.escape(p)}</td><td>{_gb(m['used'])} / {_gb(m['total'])} GB</td>"
                        f"<td>{_gb(m['avg'])} GB</td><td>{end}</td></tr>")
-    return (head + f"<h1>FüKw Datenvolumen · {html.escape(period)}</h1>"
+    hint = stale_hint(s["last"], now or datetime.now(TZ)) if period == all_p[0] else ""
+    return (head + f"<h1>FüKw Datenvolumen · {html.escape(period)}</h1>{hint}"
             f'<div class="kpis"><div><span>verbraucht</span><b>{_gb(s["used"])} / {_gb(s["total"])} GB</b></div>'
             f'<div><span>Ø pro Tag</span><b>{_gb(s["avg"])} GB</b></div>'
             f'<div><span>Prognose Monatsende</span><b>{_gb(s["projected"])} GB</b></div>'

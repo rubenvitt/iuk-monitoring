@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hourly watcher: Telekom data-pass volume + Beszel hub reachability -> Telegram."""
+"""Hourly watcher: Telekom data-pass volume + Beszel hub reachability -> ntfy."""
 import gzip
 import http.client
 import json
@@ -7,7 +7,6 @@ import os
 import re
 import sys
 import tempfile
-import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -16,6 +15,8 @@ PASS_URL = "https://pass.telekom.de"
 LOW_FRACTION = 0.2
 FAILS_TO_ALERT = 2  # consecutive hourly runs; mobile uplink blips are normal
 UNIT_GB = {"GB": 1.0, "MB": 1 / 1000, "KB": 1 / 1_000_000}
+# shortcut: the "aufgebraucht" page has no total, assumes no pass top-up; keep the last total in state if passes get bought
+FALLBACK_TOTAL_GB = 30.0
 PREFIX = "🚒 FüKw:"
 
 
@@ -38,6 +39,9 @@ def parse_pass(html: str) -> Volume | None:
         rem = re.search(r'remaining-volume-value">\s*([\d.,]+)\s*<' + unit, html, re.S)
         tot = re.search(r'start-volume">\s*([\d.,]+)\s*<' + unit, html, re.S)
         per = re.search(r"Abrechnungsmonat:\s*([^<\n]+)", html)
+        # throttled SIM: the page drops all volume numbers
+        if per and not rem and "Volumen aufgebraucht" in html:
+            return Volume(0.0, FALLBACK_TOTAL_GB, per.group(1).strip())
         if not (rem and tot and per):
             return None
         return Volume(_num(rem.group(1)) * UNIT_GB[rem.group(2).upper()],
@@ -165,20 +169,19 @@ def _record(url: str, token: str, v: Volume) -> None:
         print(f"volumen: {e}", file=sys.stderr)
 
 
-def _send(token: str, chat_id: str, text: str) -> None:
-    data = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode()
-    urllib.request.urlopen(f"https://api.telegram.org/bot{token}/sendMessage", data, timeout=20).close()
+def _send(url: str, text: str) -> None:
+    urllib.request.urlopen(url, text.encode(), timeout=20).close()
 
 
 def main() -> None:
     if sys.argv[1:] != ["run"]:
         sys.exit("usage: fuekw_watch.py run")
-    token, chat = os.environ["TELEGRAM_BOT_TOKEN"], os.environ["TELEGRAM_CHAT_ID"]
+    ntfy = os.environ["NTFY_URL"]
     hub = os.environ["HUB_HEALTH_URL"]
     state = os.environ.get("STATE_FILE", "/var/lib/fuekw-watch/state.json")
     vol_url, vol_token = os.environ.get("VOLUMEN_URL"), os.environ.get("VOLUMEN_TOKEN")
     record = (lambda v: _record(vol_url, vol_token, v)) if vol_url and vol_token else None
-    run_once(_fetch_pass, lambda: _check_hub(hub), lambda t: _send(token, chat, t), state, datetime.now(), record)
+    run_once(_fetch_pass, lambda: _check_hub(hub), lambda t: _send(ntfy, t), state, datetime.now(), record)
 
 
 if __name__ == "__main__":
