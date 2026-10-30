@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install/update fuekw-watch on the vehicle server (run as root).
-# Optional: pass a staged env file (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID,
+# Optional: pass a staged env file (NTFY_URL,
 # HUB_HEALTH_URL); it is moved to /etc/fuekw-watch.env with mode 600.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"

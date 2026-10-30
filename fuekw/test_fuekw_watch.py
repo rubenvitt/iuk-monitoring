@@ -41,6 +41,10 @@ class ParseTests(unittest.TestCase):
         v = parse_pass(snippet("905,31", unit="MB", total_unit="GB"))
         self.assertEqual((v.remaining_gb, v.total_gb), (0.90531, 30.0))
 
+    def test_parse_exhausted_page(self):
+        page = (FIXTURE.parent / "pass_2026-10-30_aufgebraucht.html").read_text()
+        self.assertEqual(parse_pass(page), Volume(0.0, 30.0, "Oktober 2026"))
+
     def test_parse_unknown_layout_returns_none(self):
         self.assertIsNone(parse_pass("<html>Page not found</html>"))
 

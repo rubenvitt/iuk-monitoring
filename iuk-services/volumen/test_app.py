@@ -50,6 +50,20 @@ class SummaryTests(unittest.TestCase):
         self.assertAlmostEqual(s["daily"][21], 1)
 
 
+class StaleHintTests(unittest.TestCase):
+    def setUp(self):
+        self.db = app.connect(":memory:")
+        app.add_reading(self.db, "Oktober 2026", 5, 30, at(29, 21, month=10))
+        app.add_reading(self.db, "November 2026", 20, 30, at(2, month=11))
+
+    def test_shown_only_after_three_hours(self):
+        self.assertNotIn('class="stale"', app.render(self.db, None, "/", now=at(2, 14)))
+        self.assertIn("vor 3 Stunden", app.render(self.db, None, "/", now=at(2, 15)))
+
+    def test_older_month_is_not_stale(self):
+        self.assertNotIn('class="stale"', app.render(self.db, "Oktober 2026", "/", now=at(2, 15)))
+
+
 class HttpTests(unittest.TestCase):
     def setUp(self):
         self.tmp = TemporaryDirectory()
