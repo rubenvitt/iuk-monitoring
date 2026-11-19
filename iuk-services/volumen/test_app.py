@@ -64,6 +64,28 @@ class StaleHintTests(unittest.TestCase):
         self.assertNotIn('class="stale"', app.render(self.db, "Oktober 2026", "/", now=at(2, 15)))
 
 
+class ChartTests(unittest.TestCase):
+    def test_nice_ticks(self):
+        self.assertEqual(app.nice_ticks(33), [0, 10, 20, 30])
+        self.assertEqual(app.nice_ticks(1.3), [0, 0.5, 1.0])
+        self.assertEqual(app.nice_ticks(0), [0])
+
+    def test_bars_carry_hover_data(self):
+        rows = [(at(d, 23).isoformat(), 30 - d, 30) for d in range(1, 4)] + [(at(4, 10).isoformat(), 26.5, 30)]
+        s = app.summarize(rows, "November 2026")
+        svg = app.chart_daily(s, "November 2026")
+        self.assertEqual(svg.count('class="bar'), 4)
+        self.assertIn("So 1.", svg)  # 1 November 2026 is a Sunday
+        self.assertIn("bis 10:00", svg)  # today's bar is still running
+        self.assertIn("unter Ø", svg)
+        self.assertIn("GB übrig", app.chart_cumulative(s, "November 2026"))
+
+    def test_reading_after_period_month_does_not_crash(self):
+        rows = [(at(2, month=11).isoformat(), 1.0, 30)]
+        s = app.summarize(rows, "Oktober 2026")
+        self.assertEqual(s["days"], 31)
+
+
 class HttpTests(unittest.TestCase):
     def setUp(self):
         self.tmp = TemporaryDirectory()
